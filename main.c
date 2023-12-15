@@ -2,10 +2,26 @@
 #include "Open1768_LCD.h"
 #include "asciiLib.h"
 #include <stdbool.h> 
+#include "GPIO_LPC17xx.h"
+#include "LPC17xx.h"
 
 #define MAX_COL_IDX 7
 #define LETTER_HEIGHT 16
 #define LETTER_WIDTH 8
+
+static const PIN RAW_PINS[] = {
+  {0U, 8U },
+  {0U, 9U },
+  {0U, 7U },
+  {0U, 6U }
+}
+
+static const PIN COL_PINS[] = {
+  {0U, 17U },
+  {0U, 18U },
+  {0U, 15U },
+  {0U, 16U }
+}
 
 struct Frame{
 	uint16_t xStart;
@@ -80,6 +96,34 @@ void writeLetters(const char* letters, const struct Frame* startingPossition)
 	}
 }
 
+void gpioSetup()
+{
+	for(int n = 0; n < 4; n++)
+	{
+		PIN_Configure (RAW_PINS[n].Portnum, RAW_PINS[n].Pinnum, PIN_FUNC_0, PIN_PINMODE_PULLDOWN, PIN_PINMODE_NORMAL);
+		GPIO_SetDir   (RAW_PINS[n].Portnum, RAW_PINS[n].Pinnum, GPIO_DIR_OUTPUT);
+	}
+	for(int n = 0; n < 4; n++)
+	{
+		PIN_Configure (COL_PINS[n].Portnum, COL_PINS[n].Pinnum, PIN_FUNC_0, PIN_PINMODE_PULLDOWN, PIN_PINMODE_NORMAL);
+		GPIO_SetDir   (COL_PINS[n].Portnum, COL_PINS[n].Pinnum, GPIO_DIR_INPUT);
+	}
+}
+
+int keyboardScan()
+{
+	for(int col = 0; col < 4; col++)
+	{
+		GPIO_PinWrite (COL_PINS[n].Portnum, COL_PINS[n].Pinnum, 0U);
+		for(int raw = 0; raw < 4; raw++)
+		{
+			if(GPIO_PinRead (RAW_PINS[raw].Portnum, RAW_PINS[raw].Pinnum) == 0)
+				return col * 4 + raw;
+		}
+	}
+	return -1;
+}
+
 int main()
 {
 	
@@ -92,8 +136,17 @@ int main()
 	char letters[5] = {'a', 'b', 'c', 'd', '!'};
 	writeLetters(letters, &letterFrame);
 	
+	gpioSetup();
+	int keyPressed = keyboardScan();
+	if(keyPressed != -1)
+	{
+		struct Frame frame = {100, 100+LETTER_WIDTH, 100, 100+LETTER_HEIGHT};
+		char symbol = keyPressed + '0';
+		drawLetter(&frame, symbol);
+	}
+
 	struct Frame frame = {100, 200, 100, 250};
-	draw(&frame, LCDRed);	
-	
+	draw(&frame, LCDRed);
+
 	while(1){}
 }
