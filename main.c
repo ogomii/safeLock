@@ -31,6 +31,13 @@ static const char KEYBOARD_MAP[] = {
 	'0', 'F', 'E', 'D'
 };
 
+static const int KEYPAD_VALUES[] = {
+	1, 2, 3, 0,
+	4, 5, 6, 0,
+	7, 8, 9, 0,
+	0, 0, 0, 0
+}
+
 struct Frame{
 	uint16_t xStart;
 	uint16_t xEnd;
@@ -174,10 +181,14 @@ void configure_lpc_rtc()
 void writeYear(struct Frame* dateFrame)
 {
 	static const int numberOfValues = 5;
-	int thousand = LPC_RTC->YEAR / 1000;
-	int hundread = LPC_RTC->YEAR % 100;
-	int tens = LPC_RTC->YEAR % 10;
-	int ones = LPC_RTC->YEAR % 1;
+	int year = LPC_RTC->YEAR;
+	int ones = year % 10;
+	year =/ 10;
+	int tens = year % 10;
+	yaer /= 10;
+	int hundread = year % 10;
+	yaer /= 10;
+	int thousand = year;
 	char dateValues[numberOfValues] = {
 		 thousand + '0',
 		 hundread + '0',
@@ -193,8 +204,10 @@ void writeYear(struct Frame* dateFrame)
 void writeMonth(struct Frame* dateFrame)
 {
 	static const int numberOfValues = 3;
-	int tens = LPC_RTC->MONTH % 10;
-	int ones = (LPC_RTC->MONTH - tens);
+	int value = LPC_RTC->MONTH;
+	int ones = value % 10;
+	value =/ 10;
+	int tens = value % 10;
 	char dateValues[numberOfValues] = {
 		 tens + '0',
 		 ones + '0',
@@ -208,8 +221,10 @@ void writeMonth(struct Frame* dateFrame)
 void writeDay(struct Frame* dateFrame)
 {
 	static const int numberOfValues = 3;
-	int tens = LPC_RTC->DOY / 10;
-	int ones = LPC_RTC->DOY / 1;
+	int value = LPC_RTC->DOY;
+	int ones = value % 10;
+	value =/ 10;
+	int tens = value % 10;
 	char dateValues[numberOfValues] = {
 		 tens + '0',
 		 ones + '0',
@@ -223,8 +238,10 @@ void writeDay(struct Frame* dateFrame)
 void writeHour(struct Frame* dateFrame)
 {
 	static const int numberOfValues = 3;
-	int tens = LPC_RTC->HOUR / 10;
-	int ones = LPC_RTC->HOUR / 1;
+	int value = LPC_RTC->HOUR;
+	int ones = value % 10;
+	value =/ 10;
+	int tens = value % 10;
 	char dateValues[numberOfValues] = {
 		 tens + '0',
 		 ones + '0',
@@ -238,8 +255,10 @@ void writeHour(struct Frame* dateFrame)
 void writeMinute(struct Frame* dateFrame)
 {
 	static const int numberOfValues = 3;
-	int tens = LPC_RTC->MIN / 10;
-	int ones = LPC_RTC->MIN / 1;
+	int value = LPC_RTC->MIN;
+	int ones = value % 10;
+	value =/ 10;
+	int tens = value % 10;
 	char dateValues[numberOfValues] = {
 		 tens + '0',
 		 ones + '0',
@@ -253,8 +272,10 @@ void writeMinute(struct Frame* dateFrame)
 void writeSec(struct Frame* dateFrame)
 {
 	static const int numberOfValues = 3;
-	int tens = LPC_RTC->SEC / 10;
-	int ones = LPC_RTC->SEC / 1;
+	int value = LPC_RTC->SEC;
+	int ones = value % 10;
+	value =/ 10;
+	int tens = value % 10;
 	char dateValues[numberOfValues] = {
 		 tens + '0',
 		 ones + '0',
@@ -276,6 +297,51 @@ void writeClockDate()
 	writeSec(&dateFrame);
 }
 
+bool saveDateValue()
+{
+	static int dateInputCounter = 0;
+	int keyPressed = -1;
+	do
+	{
+		keyPressed = keyboardScan();
+	} while (keyPressed == -1);
+
+	dateArray[dateInputCounter++] = KEYPAD_VALUES[keyPressed];
+
+	return dateInputCounter >= 14;
+}
+
+void getDate(int* dateArray)
+{
+	bool dateCollected = false;
+	do
+	{
+		dateCollected = saveDateValue(dateArray);
+	} while (dateCollected == false);
+}
+
+void saveDate(int* dateArray)
+{
+	int arrIndex = 0;
+	LPC_RTC->YEAR =
+		dateArray[arrIndex++] * 1000 +
+		dateArray[arrIndex++] * 100 +
+		dateArray[arrIndex++] * 10 +
+		dateArray[arrIndex++];
+	LPC_RTC->MONTH = dateArray[arrIndex++] * 10 + dateArray[arrIndex++];
+	LPC_RTC->DOY = dateArray[arrIndex++] * 10 + dateArray[arrIndex++];
+	LPC_RTC->HOUR = dateArray[arrIndex++] * 10 + dateArray[arrIndex++];
+	LPC_RTC->MIN = dateArray[arrIndex++] * 10 + dateArray[arrIndex++];
+	LPC_RTC->SEC = dateArray[arrIndex++] * 10 + dateArray[arrIndex++];
+}
+
+void setDate()
+{
+	int dateArray[14];
+	getDate(dateArray);
+	saveDate(dateArray);
+}
+
 int main()
 {
 	
@@ -286,8 +352,8 @@ int main()
 	
 	clearScreen();
 
-	 LPC_RTC->YEAR = 2023;
-	 LPC_RTC->MONTH = 12;
+	setDate();
+
 	while(1)
 	{
 		writeKeypadInput();
