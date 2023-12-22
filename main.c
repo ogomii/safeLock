@@ -183,7 +183,7 @@ void writeYear(struct Frame* dateFrame)
 	static const int numberOfValues = 5;
 	int year = LPC_RTC->YEAR;
 	int ones = year % 10;
-	year =/ 10;
+	year /= 10;
 	int tens = year % 10;
 	yaer /= 10;
 	int hundread = year % 10;
