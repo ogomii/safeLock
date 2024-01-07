@@ -3,7 +3,6 @@
 ".\objects\lcd_ili9325.o"
 ".\objects\main.o"
 ".\objects\open1768_lcd.o"
-".\objects\led_open1768.o"
 ".\objects\clib_arm.o"
 ".\objects\cmsis_os2.o"
 ".\objects\os_systick.o"
@@ -15,10 +14,10 @@
 ".\objects\event_groups.o"
 ".\objects\list.o"
 ".\objects\heap_4.o"
-".\objects\port.o"
 ".\objects\queue.o"
 ".\objects\tasks.o"
 ".\objects\timers.o"
+".\objects\port.o"
 --strict --scatter ".\Objects\lcdTest.sct"
 --summary_stderr --info summarysizes --map --load_addr_map_info --xref --callgraph --symbols
 --info sizes --info totals --info unused --info veneers

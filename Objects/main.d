@@ -1,19 +1,14 @@
-.\objects\main.o: main.c
-.\objects\main.o: LCD_ILI9325.h
-.\objects\main.o: Open1768_LCD.h
-.\objects\main.o: LPC17xx.h
-.\objects\main.o: C:\Keil_v5\ARM\PACK\ARM\CMSIS\5.5.1\CMSIS\Core\Include\core_cm3.h
-.\objects\main.o: C:\Keil_v5\ARM\ARMCC\Bin\..\include\stdint.h
-.\objects\main.o: C:\Keil_v5\ARM\PACK\ARM\CMSIS\5.5.1\CMSIS\Core\Include\cmsis_version.h
-.\objects\main.o: C:\Keil_v5\ARM\PACK\ARM\CMSIS\5.5.1\CMSIS\Core\Include\cmsis_compiler.h
-.\objects\main.o: C:\Keil_v5\ARM\PACK\ARM\CMSIS\5.5.1\CMSIS\Core\Include\cmsis_armcc.h
-.\objects\main.o: C:\Keil_v5\ARM\PACK\ARM\CMSIS\5.5.1\CMSIS\Core\Include\mpu_armv7.h
-.\objects\main.o: C:\Keil_v5\ARM\PACK\Keil\LPC1700_DFP\2.6.1\Device\Include\system_LPC17xx.h
-.\objects\main.o: asciiLib.h
-.\objects\main.o: C:\Keil_v5\ARM\ARMCC\Bin\..\include\string.h
-.\objects\main.o: C:\Keil_v5\ARM\ARMCC\Bin\..\include\stdbool.h
-.\objects\main.o: GPIO_LPC17xx.h
-.\objects\main.o: C:\Keil_v5\ARM\PACK\Keil\LPC1700_DFP\2.6.1\Device\Include\LPC17xx.h
-.\objects\main.o: C:\Keil_v5\ARM\PACK\Keil\LPC1700_DFP\2.6.1\RTE_Driver\PIN_LPC17xx.h
-.\objects\main.o: C:\Keil_v5\ARM\PACK\ARM\CMSIS\5.5.1\CMSIS\RTOS2\Include\cmsis_os2.h
-.\objects\main.o: C:\Keil_v5\ARM\ARMCC\Bin\..\include\stddef.h
+./objects/main.o: main.c LCD_ILI9325.h Open1768_LCD.h LPC17xx.h \
+  E:\PROGSy\keilVision\ARM\CMSIS\5.9.0\CMSIS\Core\Include\core_cm3.h \
+  E:\PROGSy\keilVision\ARM\ARMCLANG\include\stdint.h \
+  E:\PROGSy\keilVision\ARM\CMSIS\5.9.0\CMSIS\Core\Include\cmsis_version.h \
+  E:\PROGSy\keilVision\ARM\CMSIS\5.9.0\CMSIS\Core\Include\cmsis_compiler.h \
+  E:\PROGSy\keilVision\ARM\CMSIS\5.9.0\CMSIS\Core\Include\cmsis_armclang.h \
+  E:\PROGSy\keilVision\ARM\CMSIS\5.9.0\CMSIS\Core\Include\mpu_armv7.h \
+  E:\PROGSy\keilVision\Keil\LPC1700_DFP\2.7.1\Device\Include\system_LPC17xx.h \
+  asciiLib.h E:\PROGSy\keilVision\ARM\ARMCLANG\include\string.h \
+  E:\PROGSy\keilVision\ARM\ARMCLANG\include\stdbool.h GPIO_LPC17xx.h \
+  E:\PROGSy\keilVision\Keil\LPC1700_DFP\2.7.1\Device\Include\LPC17xx.h \
+  E:\PROGSy\keilVision\Keil\LPC1700_DFP\2.7.1\RTE_Driver\PIN_LPC17xx.h \
+  E:\PROGSy\keilVision\ARM\CMSIS\5.9.0\CMSIS\RTOS2\Include\cmsis_os2.h \
+  E:\PROGSy\keilVision\ARM\ARMCLANG\include\stddef.h

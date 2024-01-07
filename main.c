@@ -300,12 +300,31 @@ void writeClockDate()
 	writeSec(&dateFrame);
 }
 
+void writeDateTypeToSeve(int dateInputCounter)
+{
+	int dateTypeIndex = dateInputCounter / 2;
+	static char lettersRow[7][4] = {{'Y','E','A','R'},
+																	{'Y','E','A','R'},
+																	{'M','O','N',' '},
+																	{'D','A','Y',' '},
+																	{'H','O','U','R'},
+																	{'M','I','N',' '},
+																	{'S','E','C',' '}};
+	
+	struct Frame letterFrameCol = {70, 70 + LETTER_WIDTH, 70, 70 + LETTER_HEIGHT};
+	writeLetters(lettersRow[dateTypeIndex], &letterFrameCol, 4);
+}
+
 bool saveDateValue(int* dateArray)
 {
 	static int dateInputCounter = 0;
 	static int lastSavedValue = -1;
 	int keyPressed = -1;
+	
+	writeDateTypeToSeve(dateInputCounter);
+	
 	struct Frame keyFrame = {100, 100+LETTER_WIDTH, 100, 100+LETTER_HEIGHT};
+	
 	do
 	{
 		keyPressed = keyboardScan();
@@ -373,7 +392,7 @@ void setDate()
 
 void app_main (void *argument) {
 	clearScreen();
-	//setDate();
+	setDate();
 
 	while(1)
 	{
