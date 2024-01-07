@@ -12,6 +12,21 @@
 #define LETTER_HEIGHT 16
 #define LETTER_WIDTH 8
 
+enum lock_state{
+	LOCKED,
+	UNLOCKED
+};
+osTimerId_t timer0;
+enum lock_state LOCK_STATE = LOCKED;
+
+#define CODE_LEN 4
+int ENTERED_CODE[CODE_LEN] = {-1, -1, -1, -1};
+int codeInputCounter = 0;
+int PASSCODE[CODE_LEN] = {1,2,3,4};
+
+const int CodeXPos = LCD_MAX_X / 2 - (2 * LETTER_WIDTH);
+const int CodeYPos = LCD_MAX_Y / 2 - LETTER_HEIGHT;  // 1 over state
+
 static const PIN ROW_PINS[] = {
   {0U, 0U },
   {0U, 1U },
@@ -39,6 +54,8 @@ static const int KEYPAD_VALUES[] = {
 	7, 8, 9, 0,
 	0, 0, 0, 0
 };
+
+static const int CHAR[] = {'0','1','2','3','4','5','6','7','8','9'};
 
 struct Frame{
 	uint16_t xStart;
@@ -161,18 +178,101 @@ void debugKeypadPrint()
 	writeLetters(lettersRow, &letterFrameCol, 4);
 }
 
+
+bool isCodeOk()
+{
+	for(int digit = 0; digit < CODE_LEN; digit++)
+	{
+		if(ENTERED_CODE[digit] != PASSCODE[digit])
+		{
+			return false;
+		}
+	}
+	return  true;
+}
+
+void resetEnteredCode()
+{
+	ENTERED_CODE[0] = -1;
+	ENTERED_CODE[1] = -1;
+	ENTERED_CODE[2] = -1;
+	ENTERED_CODE[3] = -1;
+	codeInputCounter = 0;
+}
+
+void callback(void *param){
+	LOCK_STATE = LOCKED;
+}
+
+void checkCode()
+{
+	if(isCodeOk())
+	{
+		LOCK_STATE = UNLOCKED;
+		timer0 = osTimerNew(&callback, osTimerOnce,(void *)0, NULL);
+		osTimerStart(timer0, 10000);
+	}
+	resetEnteredCode();
+}
+
+void saveCode(int keyPressed)
+{
+		if( codeInputCounter == 0)
+		{
+			ENTERED_CODE[codeInputCounter] = KEYPAD_VALUES[keyPressed];
+			codeInputCounter += 1;
+		}
+		else if(ENTERED_CODE[codeInputCounter-1] != KEYPAD_VALUES[keyPressed])
+		{
+			ENTERED_CODE[codeInputCounter] = KEYPAD_VALUES[keyPressed];
+			codeInputCounter += 1;
+		}
+}
+
 void writeKeypadInput()
 {		
 	int keyPressed = keyboardScan();
-	struct Frame keyFrame = {100, 100+LETTER_WIDTH, 100, 100+LETTER_HEIGHT};
+	struct Frame keyFrame = {LCD_MAX_X / 2, LCD_MAX_X / 2 +LETTER_WIDTH, CodeYPos - (2*LETTER_HEIGHT), CodeYPos - LETTER_HEIGHT};
 	if(keyPressed != -1)
 	{
 		char symbol = KEYBOARD_MAP[keyPressed];
 		drawLetter(&keyFrame, symbol);
 		
-		
+		saveCode(keyPressed);
+		if(codeInputCounter >= CODE_LEN)
+		{
+			checkCode();
+		}
 	}
-	debugKeypadPrint();
+	//debugKeypadPrint();
+}
+
+void writeLockState()
+{
+	static char lettersRow[2][8] = {{'L','O','C','K','E','D',' ',' '},
+																	{'U','N','L','O','C','K','E','D'},};
+	static int xPos = LCD_MAX_X / 2 - (4 * LETTER_WIDTH);
+	static int yPos = LCD_MAX_Y / 2;
+	struct Frame letterFrameCol = {xPos, xPos + LETTER_WIDTH, yPos, yPos + LETTER_HEIGHT};
+	writeLetters(lettersRow[LOCK_STATE], &letterFrameCol, 8);
+}
+
+void writeEnteredCode()
+{
+	struct Frame keyFrame = {CodeXPos, CodeXPos+LETTER_WIDTH, CodeYPos - LETTER_HEIGHT, CodeYPos};
+	for(int digit = 0; digit < CODE_LEN; digit++)
+	{
+		if(ENTERED_CODE[digit] == -1)
+		{
+			break;
+		}
+		else
+		{
+			drawLetter(&keyFrame, CHAR[ENTERED_CODE[digit]]);
+			keyFrame.xStart += 10;
+			keyFrame.xEnd += 10;
+		}
+	}
 }
 
 //real time clock
@@ -329,6 +429,7 @@ bool saveDateValue(int* dateArray)
 	{
 		keyPressed = keyboardScan();
 	} while (keyPressed == -1);
+	
 	char symbol = KEYBOARD_MAP[keyPressed];
 	drawLetter(&keyFrame, symbol);
 	clearScreen();
@@ -389,14 +490,15 @@ void setDate()
 	saveDate(dateArray);
 }
 
-
 void app_main (void *argument) {
 	clearScreen();
-	setDate();
+	//setDate();
 
 	while(1)
 	{
 		writeKeypadInput();
+		writeEnteredCode();
+		writeLockState();
 		writeClockDate();
 		osDelay(100);
 		clearScreen();
@@ -416,6 +518,4 @@ int main()
     osKernelStart();                    								// Start thread execution
   }
 		
-	//struct Frame frame = {100, 200, 100, 250};
-	//draw(&frame, LCDRed);
 }

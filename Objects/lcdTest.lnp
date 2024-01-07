@@ -13,11 +13,11 @@
 ".\objects\freertos_evr.o"
 ".\objects\event_groups.o"
 ".\objects\list.o"
+".\objects\port.o"
 ".\objects\heap_4.o"
 ".\objects\queue.o"
 ".\objects\tasks.o"
 ".\objects\timers.o"
-".\objects\port.o"
 --strict --scatter ".\Objects\lcdTest.sct"
 --summary_stderr --info summarysizes --map --load_addr_map_info --xref --callgraph --symbols
 --info sizes --info totals --info unused --info veneers
