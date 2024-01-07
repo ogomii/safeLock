@@ -14,7 +14,8 @@
 
 enum lock_state{
 	LOCKED,
-	UNLOCKED
+	UNLOCKED,
+	NEW_CODE
 };
 osTimerId_t timer0;
 enum lock_state LOCK_STATE = LOCKED;
@@ -22,7 +23,9 @@ enum lock_state LOCK_STATE = LOCKED;
 #define CODE_LEN 4
 int ENTERED_CODE[CODE_LEN] = {-1, -1, -1, -1};
 int codeInputCounter = 0;
+
 int PASSCODE[CODE_LEN] = {1,2,3,4};
+int passcodeInputCounter = 0;
 
 const int CodeXPos = LCD_MAX_X / 2 - (2 * LETTER_WIDTH);
 const int CodeYPos = LCD_MAX_Y / 2 - LETTER_HEIGHT;  // 1 over state
@@ -39,6 +42,10 @@ static const PIN COL_PINS[] = {
   {0U, 18U },
   {0U, 15U },
   {0U, 16U }
+};
+
+static const PIN LED_PIN[] = {
+  {0U, 3U },
 };
 
 static const char KEYBOARD_MAP[] = {
@@ -63,6 +70,17 @@ struct Frame{
 	uint16_t yStart;
 	uint16_t yEnd;
 };
+
+struct Date{
+	int year;
+	int month;
+	int day;
+	int hour;
+	int min;
+	int sec;
+};
+
+struct Date LAST_STATE_CHANGE = {0, 0, 0, 0, 0, 0};
 
 void draw(const struct Frame* frame, const uint16_t color)
 {
@@ -141,6 +159,9 @@ void gpioSetup()
 		PIN_Configure (COL_PINS[n].Portnum, COL_PINS[n].Pinnum, PIN_FUNC_0, PIN_PINMODE_PULLDOWN, PIN_PINMODE_NORMAL);
 		GPIO_SetDir   (COL_PINS[n].Portnum, COL_PINS[n].Pinnum, GPIO_DIR_INPUT);
 	}
+	
+	PIN_Configure (LED_PIN[0].Portnum, LED_PIN[0].Pinnum, PIN_FUNC_0, PIN_PINMODE_PULLDOWN, PIN_PINMODE_NORMAL);
+	GPIO_SetDir   (LED_PIN[0].Portnum, LED_PIN[0].Pinnum, GPIO_DIR_OUTPUT);
 }
 
 int keyboardScan()
@@ -200,6 +221,15 @@ void resetEnteredCode()
 	codeInputCounter = 0;
 }
 
+void resetPasscode()
+{
+	PASSCODE[0] = -1;
+	PASSCODE[1] = -1;
+	PASSCODE[2] = -1;
+	PASSCODE[3] = -1;
+	passcodeInputCounter = 0;
+}
+
 void callback(void *param){
 	LOCK_STATE = LOCKED;
 }
@@ -229,6 +259,20 @@ void saveCode(int keyPressed)
 		}
 }
 
+void saveNewCode(int keyPressed)
+{
+		if( passcodeInputCounter == 0)
+		{
+			PASSCODE[passcodeInputCounter] = KEYPAD_VALUES[keyPressed];
+			passcodeInputCounter += 1;
+		}
+		else if(PASSCODE[passcodeInputCounter-1] != KEYPAD_VALUES[keyPressed])
+		{
+			PASSCODE[passcodeInputCounter] = KEYPAD_VALUES[keyPressed];
+			passcodeInputCounter += 1;
+		}
+}
+
 void writeKeypadInput()
 {		
 	int keyPressed = keyboardScan();
@@ -238,10 +282,21 @@ void writeKeypadInput()
 		char symbol = KEYBOARD_MAP[keyPressed];
 		drawLetter(&keyFrame, symbol);
 		
-		saveCode(keyPressed);
-		if(codeInputCounter >= CODE_LEN)
+		if(LOCK_STATE == LOCKED)
 		{
-			checkCode();
+			saveCode(keyPressed);
+			if(codeInputCounter >= CODE_LEN)
+			{
+				checkCode();
+			}
+		}
+		else if(LOCK_STATE == NEW_CODE)
+		{
+			saveNewCode(keyPressed);
+			if(passcodeInputCounter >= CODE_LEN)
+			{
+				LOCK_STATE = LOCKED;
+			}
 		}
 	}
 	//debugKeypadPrint();
@@ -249,8 +304,9 @@ void writeKeypadInput()
 
 void writeLockState()
 {
-	static char lettersRow[2][8] = {{'L','O','C','K','E','D',' ',' '},
-																	{'U','N','L','O','C','K','E','D'},};
+	static char lettersRow[3][8] = {{'L','O','C','K','E','D',' ',' '},
+																	{'U','N','L','O','C','K','E','D'},
+																	{'N','E','W',' ','C','O','D','E'},};
 	static int xPos = LCD_MAX_X / 2 - (4 * LETTER_WIDTH);
 	static int yPos = LCD_MAX_Y / 2;
 	struct Frame letterFrameCol = {xPos, xPos + LETTER_WIDTH, yPos, yPos + LETTER_HEIGHT};
@@ -262,15 +318,31 @@ void writeEnteredCode()
 	struct Frame keyFrame = {CodeXPos, CodeXPos+LETTER_WIDTH, CodeYPos - LETTER_HEIGHT, CodeYPos};
 	for(int digit = 0; digit < CODE_LEN; digit++)
 	{
-		if(ENTERED_CODE[digit] == -1)
+		if(LOCK_STATE == LOCKED)
 		{
-			break;
+			if(ENTERED_CODE[digit] == -1)
+			{
+				break;
+			}
+			else
+			{
+				drawLetter(&keyFrame, CHAR[ENTERED_CODE[digit]]);
+				keyFrame.xStart += 10;
+				keyFrame.xEnd += 10;
+			}
 		}
-		else
+		else if(LOCK_STATE == NEW_CODE)
 		{
-			drawLetter(&keyFrame, CHAR[ENTERED_CODE[digit]]);
-			keyFrame.xStart += 10;
-			keyFrame.xEnd += 10;
+			if(PASSCODE[digit] == -1)
+			{
+				break;
+			}
+			else
+			{
+				drawLetter(&keyFrame, CHAR[PASSCODE[digit]]);
+				keyFrame.xStart += 10;
+				keyFrame.xEnd += 10;
+			}
 		}
 	}
 }
@@ -281,10 +353,10 @@ void configure_lpc_rtc()
 		LPC_RTC->CCR = 1; // clock control register, wlaczenie zegara
 }
 
-void writeYear(struct Frame* dateFrame)
+void writeYear(struct Frame* dateFrame, int inputYear)
 {
 	static const int numberOfValues = 5;
-	int year = LPC_RTC->YEAR;
+	int year = inputYear;
 	int ones = year % 10;
 	year /= 10;
 	int tens = year % 10;
@@ -304,10 +376,10 @@ void writeYear(struct Frame* dateFrame)
 	dateFrame->xEnd += LETTER_WIDTH*(numberOfValues+1);
 }
 
-void writeMonth(struct Frame* dateFrame)
+void writeMonth(struct Frame* dateFrame, int inputMon)
 {
 	static const int numberOfValues = 3;
-	int value = LPC_RTC->MONTH;
+	int value = inputMon;
 	int ones = value % 10;
 	value /= 10;
 	int tens = value % 10;
@@ -321,10 +393,10 @@ void writeMonth(struct Frame* dateFrame)
 	dateFrame->xEnd += LETTER_WIDTH*(numberOfValues+1);
 }
 
-void writeDay(struct Frame* dateFrame)
+void writeDay(struct Frame* dateFrame, int inputDay)
 {
 	static const int numberOfValues = 3;
-	int value = LPC_RTC->DOY;
+	int value = inputDay;
 	int ones = value % 10;
 	value /= 10;
 	int tens = value % 10;
@@ -338,10 +410,10 @@ void writeDay(struct Frame* dateFrame)
 	dateFrame->xEnd += LETTER_WIDTH*(numberOfValues+1);
 }
 
-void writeHour(struct Frame* dateFrame)
+void writeHour(struct Frame* dateFrame, int inputHour)
 {
 	static const int numberOfValues = 3;
-	int value = LPC_RTC->HOUR;
+	int value = inputHour;
 	int ones = value % 10;
 	value /= 10;
 	int tens = value % 10;
@@ -355,10 +427,10 @@ void writeHour(struct Frame* dateFrame)
 	dateFrame->xEnd += LETTER_WIDTH*(numberOfValues+1);
 }
 
-void writeMinute(struct Frame* dateFrame)
+void writeMinute(struct Frame* dateFrame, int inputMin)
 {
 	static const int numberOfValues = 3;
-	int value = LPC_RTC->MIN;
+	int value = inputMin;
 	int ones = value % 10;
 	value /= 10;
 	int tens = value % 10;
@@ -372,10 +444,10 @@ void writeMinute(struct Frame* dateFrame)
 	dateFrame->xEnd += LETTER_WIDTH*(numberOfValues+1);
 }
 
-void writeSec(struct Frame* dateFrame)
+void writeSec(struct Frame* dateFrame, int inputSec)
 {
 	static const int numberOfValues = 3;
-	int value = LPC_RTC->SEC;
+	int value = inputSec;
 	int ones = value % 10;
 	value /= 10;
 	int tens = value % 10;
@@ -391,13 +463,16 @@ void writeSec(struct Frame* dateFrame)
 
 void writeClockDate()
 {
+	struct Frame letterFrame = {10, 10 + LETTER_WIDTH, 280, 280 + LETTER_HEIGHT};
+	const char letters[12] = {'C','U','R','R','E','N','T',' ','D','A','T','E'};
+	writeLetters(letters, &letterFrame, 12);
 	struct Frame dateFrame = {10, 10 + LETTER_WIDTH, 300, 300 + LETTER_HEIGHT};
-	writeYear(&dateFrame);
-	writeMonth(&dateFrame);
-	writeDay(&dateFrame);
-	writeHour(&dateFrame);
-	writeMinute(&dateFrame);
-	writeSec(&dateFrame);
+	writeYear(&dateFrame, LPC_RTC->YEAR);
+	writeMonth(&dateFrame, LPC_RTC->MONTH);
+	writeDay(&dateFrame, LPC_RTC->DOY);
+	writeHour(&dateFrame, LPC_RTC->HOUR);
+	writeMinute(&dateFrame, LPC_RTC->MIN);
+	writeSec(&dateFrame, LPC_RTC->SEC);
 }
 
 void writeDateTypeToSeve(int dateInputCounter)
@@ -488,18 +563,82 @@ void setDate()
 	int dateArray[14];
 	getDate(dateArray);
 	saveDate(dateArray);
+	osDelay(300);
+}
+
+void checkDButton()
+{
+	int keyPressed = keyboardScan();
+	if(keyPressed == 15)
+	{
+		LOCK_STATE = NEW_CODE;
+		resetPasscode();
+		osDelay(300);
+	}
+}
+
+
+void udpdateLastStateChangeDate()
+{
+	LAST_STATE_CHANGE.year = LPC_RTC->YEAR;
+	LAST_STATE_CHANGE.month = LPC_RTC->MONTH;
+	LAST_STATE_CHANGE.day = LPC_RTC->DOY;
+	LAST_STATE_CHANGE.hour = LPC_RTC->HOUR;
+	LAST_STATE_CHANGE.min = LPC_RTC->MIN;
+	LAST_STATE_CHANGE.sec = LPC_RTC->SEC;
+}
+
+void writeLastStateChangeDate()
+{
+	struct Frame letterFrame = {10, 10 + LETTER_WIDTH, 230, 230 + LETTER_HEIGHT};
+	const char letters[17] = {'L','A','S','T',' ','S','T','A','T','E',' ','C','H','A','N','G','E'};
+	writeLetters(letters, &letterFrame, 17);
+	struct Frame dateFrame = {10, 10 + LETTER_WIDTH, 250, 250 + LETTER_HEIGHT};
+	writeYear(&dateFrame, LAST_STATE_CHANGE.year);
+	writeMonth(&dateFrame, LAST_STATE_CHANGE.month);
+	writeDay(&dateFrame, LAST_STATE_CHANGE.day);
+	writeHour(&dateFrame, LAST_STATE_CHANGE.hour);
+	writeMinute(&dateFrame, LAST_STATE_CHANGE.min);
+	writeSec(&dateFrame, LAST_STATE_CHANGE.sec);
+}
+
+void writeLastStateChange()
+{
+	static enum lock_state lasteKnownState = NEW_CODE;
+	if(LOCK_STATE != lasteKnownState)
+	{
+		lasteKnownState = LOCK_STATE;
+		udpdateLastStateChangeDate();
+	}
+	
+	writeLastStateChangeDate();
+}
+
+void lightLed()
+{
+	if(LOCK_STATE == UNLOCKED)
+	{
+		GPIO_PinWrite (LED_PIN[0].Portnum, LED_PIN[0].Pinnum, 0U);
+	}
+	else
+	{
+		GPIO_PinWrite (LED_PIN[0].Portnum, LED_PIN[0].Pinnum, 1U);
+	}
 }
 
 void app_main (void *argument) {
 	clearScreen();
-	//setDate();
+	setDate();
 
 	while(1)
 	{
+		checkDButton();
 		writeKeypadInput();
 		writeEnteredCode();
 		writeLockState();
+		writeLastStateChange();
 		writeClockDate();
+		lightLed();
 		osDelay(100);
 		clearScreen();
 	}
